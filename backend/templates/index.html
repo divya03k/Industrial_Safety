@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Smart Industrial Safety Management System</title>
+
+<link rel="stylesheet" href="/static/css/dashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix"></script>
+
+</head>
+
+<body>
+
+<!-- ✅ FIXED PATH -->
+<audio id="alertSound" src="/static/sounds/alarm.mp3" preload="auto"></audio>
+
+<div class="container">
+
+<!-- SIDEBAR -->
+<div class="sidebar" style="padding:15px;">
+
+<div style="background:#1e2937; border-radius:12px; padding:20px; height:100%;">
+
+<h2 class="logo">PPE Monitoring</h2>
+
+<!-- ✅ SDG BADGE -->
+<div style="display:flex; align-items:center; gap:10px; margin:15px 0;">
+    <div style="background:orange; color:white; font-size:10px; padding:4px 8px; border-radius:5px;">
+        SDG 9
+    </div>
+    <div style="font-size:12px;">
+        Industry, Innovation<br>
+        <span style="color:gray;">and Infrastructure</span>
+    </div>
+</div>
+
+<ul class="menu">
+
+<li onclick="showPage('dashboard')">Dashboard</li>
+<li onclick="showPage('live')">Live Monitoring</li>
+<li onclick="showPage('uploads')">Uploaded Videos</li>
+<li onclick="showPage('alerts')">Alerts</li>
+<li onclick="showPage('logs')">Violation Logs</li>
+<li onclick="showPage('analytics')">Analytics</li>
+
+</ul>
+
+</div>
+</div>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ✅ TOP BAR -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+
+<h2 id="pageTitle"></h2>
+
+<div style="display:flex; align-items:center; gap:20px;">
+
+<!-- 🔔 ALERT ICON -->
+<div onclick="showPage('alerts')" style="cursor:pointer;">
+    <span style="font-size:20px;">🔔</span>
+</div>
+
+<!-- 👤 ADMIN -->
+<div style="display:flex; align-items:center; gap:8px;">
+    <div style="font-size:14px;">Admin</div>
+    <div style="background:#3b82f6; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+        👷
+    </div>
+</div>
+
+</div>
+
+</div>
+
+<!-- DASHBOARD -->
+<section id="dashboard" class="page">
+
+<div class="dashboard-grid">
+
+<div class="stat-card total-card">
+<h3>Total Violations</h3>
+<p id="totalViolations">0</p>
+</div>
+
+<div class="stat-card helmet-card">
+<h3>Helmet Missing</h3>
+<p id="helmetCount">0</p>
+</div>
+
+<div class="stat-card vest-card">
+<h3>Vest Missing</h3>
+<p id="vestCount">0</p>
+</div>
+
+</div>
+
+<div class="alerts-section">
+
+<h3>Recent Alerts</h3>
+
+<div id="alertsList"></div>
+
+</div>
+
+</section>
+
+<!-- LIVE -->
+<section id="live" class="page">
+
+<h3>Live Monitoring</h3>
+
+<div class="live-container">
+
+<div class="video-box">
+<video id="webcam" autoplay playsinline></video>
+</div>
+
+<div class="video-box">
+<img id="processedFrame">
+</div>
+
+</div>
+
+<canvas id="canvas" style="display:none"></canvas>
+
+<div class="controls">
+<button onclick="startCamera()">Start Camera</button>
+<button onclick="stopCamera()">Stop Camera</button>
+</div>
+
+</section>
+
+<!-- UPLOAD -->
+<section id="uploads" class="page">
+
+<h3>Upload Video</h3>
+
+<input type="file" id="videoInput">
+<button onclick="uploadVideo()">Upload</button>
+
+<br><br>
+
+<video id="videoPlayer" controls width="600"></video>
+
+</section>
+
+<!-- ALERTS -->
+<section id="alerts" class="page">
+
+<h3>Safety Alerts</h3>
+
+<div class="alerts-container" id="alertsPageList">
+<p class="no-alert">No alerts yet</p>
+</div>
+
+</section>
+
+<!-- ANALYTICS -->
+<section id="analytics" class="page">
+
+<h3>Analytics Dashboard</h3>
+
+<select id="chartSelector" onchange="renderSelectedChart()">
+<option value="bar">Bar Chart</option>
+<option value="pie">Pie Chart</option>
+<option value="line">Line Chart</option>
+<option value="doughnut">Doughnut Chart</option>
+<option value="horizontal">Horizontal Bar</option>
+<option value="matrix">Matrix Chart</option>
+<option value="timeline">Time Trend</option>
+</select>
+
+<br><br>
+
+<div class="insights-box">
+<h3>Top Insights</h3>
+<p id="insight1"></p>
+<p id="insight2"></p>
+<p id="insight3"></p>
+</div>
+
+<div class="chart-container">
+<canvas id="analyticsChart"></canvas>
+</div>
+
+</section>
+
+<!-- LOGS -->
+<section id="logs" class="page">
+
+<h3>Violation Logs</h3>
+
+<table>
+
+<thead>
+<tr>
+<th>Time</th>
+<th>Camera</th>
+<th>Violation</th>
+<th>Confidence</th>
+</tr>
+</thead>
+
+<tbody id="logsTable"></tbody>
+
+</table>
+
+</section>
+
+</main>
+
+</div>
+
+<script src="/static/js/dashboard.js"></script>
+
+</body>
+</html>

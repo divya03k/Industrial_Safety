@@ -1,0 +1,4 @@
+SUPABASE_URL = "https://eypgcowxggclnecmnvlj.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5cGdjb3d4Z2djbG5lY21udmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDI3MjYsImV4cCI6MjA4OTA3ODcyNn0.PB7ymTuWcN4880b4tYbNEyHAA_Z7DPD2HKSANJVChbs"
+
+MODEL_PATH = r"C:\Users\Admin\Frontend\model\best.pt"
