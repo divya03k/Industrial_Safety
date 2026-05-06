@@ -1,222 +1,1017 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
-<title>Smart Industrial Safety Management System</title>
-
+<title>AI PPE Monitoring</title>
 <link rel="stylesheet" href="/static/css/dashboard.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix"></script>
+<!-- jsPDF for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-base:       #0d1117;
+    --bg-panel:      #161b24;
+    --bg-card:       #1c2333;
+    --bg-hover:      #222b3a;
+    --border:        #2a3447;
+    --border-light:  #334155;
+    --accent-blue:   #3b82f6;
+    --accent-teal:   #06b6d4;
+    --accent-green:  #22c55e;
+    --accent-orange: #f97316;
+    --accent-red:    #ef4444;
+    --accent-yellow: #eab308;
+    --text-primary:  #e2e8f0;
+    --text-secondary:#94a3b8;
+    --text-muted:    #475569;
+    --font-main:     'IBM Plex Sans', sans-serif;
+    --font-mono:     'IBM Plex Mono', monospace;
+  }
+
+  html, body { height: 100%; background: var(--bg-base); color: var(--text-primary); font-family: var(--font-main); font-size: 14px; overflow: hidden; }
+
+  .app-shell { display: grid; grid-template-columns: 220px 1fr; grid-template-rows: 52px 1fr; height: 100vh; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    grid-column: 1 / -1;
+    background: var(--bg-panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; z-index: 100;
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .brand-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #06b6d4, #3b82f6);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand-icon svg { width: 17px; height: 17px; stroke: #fff; }
+  .topbar-brand h1 { font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .icon-btn {
+    position: relative; cursor: pointer;
+    background: var(--bg-card); border: 1px solid var(--border);
+    width: 34px; height: 34px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .icon-btn svg { width: 15px; height: 15px; stroke: var(--text-secondary); }
+  .icon-btn:hover { background: var(--bg-hover); }
+  .bell-dot { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-orange); border: 1.5px solid var(--bg-panel); }
+  .admin-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    padding: 4px 10px 4px 6px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: background .15s;
+  }
+  .admin-pill:hover { background: var(--bg-hover); }
+  .admin-pill .av {
+    width: 26px; height: 26px; border-radius: 6px; background: var(--accent-blue);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .admin-pill .av svg { width: 14px; height: 14px; stroke: #fff; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--bg-panel); border-right: 1px solid var(--border);
+    padding: 16px 12px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto;
+  }
+  .sdg-badge {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    padding: 10px 12px; border-radius: 10px;
+  }
+  .sdg-tag {
+    background: var(--accent-orange); color: #fff;
+    font-size: 9px; font-weight: 700; padding: 4px 7px; border-radius: 5px;
+    text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+  }
+  .sdg-text { font-size: 11px; line-height: 1.5; color: var(--text-secondary); }
+  .sdg-text strong { color: var(--text-primary); display: block; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    transition: all .15s; user-select: none;
+  }
+  .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .nav-item.active { background: var(--accent-blue); color: #fff; }
+  .nav-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nav-icon svg { width: 15px; height: 15px; stroke: currentColor; }
+  .sidebar-footer { margin-top: auto; }
+  .nav-item.logout { color: var(--accent-red); }
+  .nav-item.logout:hover { background: rgba(239,68,68,.12); }
+
+  /* ── MAIN ── */
+  .main-content {
+    background: var(--bg-base); overflow-y: auto;
+    padding: 20px; display: flex; flex-direction: column; gap: 16px;
+  }
+  #pageTitle { font-size: 15px; font-weight: 600; color: var(--text-secondary); letter-spacing: .3px; }
+  .page { display: none; flex-direction: column; gap: 16px; }
+  .page.active { display: flex; }
+
+  /* ── STAT CARDS ── */
+  .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .stat-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; display: flex; align-items: center; gap: 14px;
+  }
+  .stat-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .stat-icon svg { width: 20px; height: 20px; }
+  .stat-icon.orange { background: rgba(249,115,22,.15); } .stat-icon.orange svg { stroke: var(--accent-orange); }
+  .stat-icon.purple { background: rgba(139,92,246,.15); } .stat-icon.purple svg { stroke: #a78bfa; }
+  .stat-icon.green  { background: rgba(34,197,94,.15);  } .stat-icon.green svg  { stroke: var(--accent-green); }
+  .stat-body h3 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+  .stat-body .val { font-size: 26px; font-weight: 700; font-family: var(--font-mono); }
+  .stat-body .val.orange { color: var(--accent-orange); }
+  .stat-body .val.purple { color: #a78bfa; }
+  .stat-body .val.green  { color: var(--accent-green); }
+
+  .dashboard-bottom { display: grid; grid-template-columns: 1fr 310px; gap: 14px; }
+
+  /* ── PANELS ── */
+  .panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .panel-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); flex-shrink: 0; }
+
+  /* ── ALERTS LIST (dashboard) ── */
+  .alerts-list { padding: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+  .alert-row {
+    display: grid; grid-template-columns: 100px 44px 1fr auto;
+    align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-card); transition: background .12s;
+  }
+  .alert-row:hover { background: var(--bg-hover); }
+  .alert-time { font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono); }
+  .alert-thumb {
+    width: 40px; height: 34px; border-radius: 6px; background: var(--bg-hover);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .alert-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+  .alert-thumb svg { width: 16px; height: 16px; stroke: var(--text-muted); fill: none; }
+  .alert-info { display: flex; flex-direction: column; gap: 3px; }
+  .alert-cam { font-size: 11px; color: var(--text-muted); }
+  .vtag { display: inline-flex; align-items: center; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; width: fit-content; }
+  .vtag.red    { background: rgba(239,68,68,.15);  color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+  .vtag.orange { background: rgba(249,115,22,.15); color: #fb923c; border: 1px solid rgba(249,115,22,.3); }
+  .vtag.yellow { background: rgba(234,179,8,.15);  color: #facc15; border: 1px solid rgba(234,179,8,.3); }
+  .view-btn {
+    font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--accent-blue);
+    background: rgba(59,130,246,.1); color: var(--accent-blue); cursor: pointer;
+    font-family: var(--font-main); font-weight: 600; transition: all .15s; white-space: nowrap;
+  }
+  .view-btn:hover { background: var(--accent-blue); color: #fff; }
+
+  /* ── BREAKDOWN ── */
+  .breakdown-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .breakdown-row { display: flex; flex-direction: column; gap: 5px; }
+  .breakdown-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
+  .breakdown-label .count { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); }
+  .bar-track { height: 6px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+  .bar-fill.red    { background: var(--accent-red); }
+  .bar-fill.orange { background: var(--accent-orange); }
+  .bar-fill.yellow { background: var(--accent-yellow); }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── COMPLIANCE RINGS ── */
+  .compliance-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; padding: 12px; }
+  .compliance-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 10px; text-align: center; }
+  .ring-wrap { position: relative; width: 58px; height: 58px; margin: 0 auto 8px; }
+  .ring-wrap > svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg   { fill: none; stroke: var(--border); stroke-width: 5; }
+  .ring-fill { fill: none; stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray .6s ease; }
+  .ring-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: var(--font-mono); }
+  .compliance-name { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; }
+
+  /* ── LIVE PAGE ── */
+  .live-grid { display: grid; grid-template-columns: 1fr 340px; gap: 14px; }
+  .camera-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .camera-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .camera-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .camera-title svg { width: 14px; height: 14px; stroke: var(--text-muted); }
+  .cam-badge { background: var(--accent-teal); color: #000; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: .5px; }
+  .video-wrapper { position: relative; background: #0a0e14; aspect-ratio: 16/9; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .video-wrapper video, .video-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+  .video-placeholder { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); position: absolute; inset: 0; justify-content: center; pointer-events: none; }
+  .video-placeholder svg { width: 32px; height: 32px; stroke: var(--text-muted); opacity: .35; fill: none; }
+  .video-placeholder span { font-size: 12px; opacity: .4; font-family: var(--font-mono); }
+  .detection-pill { position: absolute; top: 10px; left: 10px; background: rgba(6,182,212,.9); color: #000; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 4px; letter-spacing: .3px; }
+  .camera-footer { padding: 9px 14px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .live-indicator { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green); display: inline-block; margin-right: 5px; box-shadow: 0 0 6px var(--accent-green); animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+  .cam-controls { display: flex; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--border); }
+  .ctrl-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; font-family: var(--font-main); transition: all .15s;
+  }
+  .ctrl-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; }
+  .ctrl-btn.primary { background: var(--accent-blue); color: #fff; }
+  .ctrl-btn.primary:hover { background: #2563eb; }
+  .ctrl-btn.danger  { background: rgba(239,68,68,.12); color: var(--accent-red); border: 1px solid rgba(239,68,68,.25); }
+  .ctrl-btn.danger:hover  { background: var(--accent-red); color: #fff; }
+
+  /* ── UPLOAD PAGE ── */
+  .upload-zone {
+    border: 2px dashed var(--border-light); border-radius: 12px;
+    padding: 40px 20px; text-align: center; background: var(--bg-card);
+    transition: all .15s; cursor: pointer;
+  }
+  .upload-zone:hover { border-color: var(--accent-blue); background: rgba(59,130,246,.04); }
+  .up-icon { width: 42px; height: 42px; margin: 0 auto 14px; }
+  .up-icon svg { width: 100%; height: 100%; stroke: var(--text-muted); fill: none; }
+  .upload-zone p { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; }
+  .file-label {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--accent-blue); color: #fff;
+    padding: 9px 20px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+  }
+  .file-label svg { width: 13px; height: 13px; stroke: currentColor; fill: none; }
+  .file-label input { display: none; }
+  .upload-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;
+    background: var(--accent-green); color: #fff;
+    font-size: 13px; font-weight: 600; font-family: var(--font-main);
+    margin-top: 12px; transition: all .15s;
+  }
+  .upload-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; }
+  .upload-btn:hover { background: #16a34a; }
+  .upload-btn:disabled { background: var(--text-muted); cursor: not-allowed; opacity: .7; }
+
+  /* Processed video result panel */
+  .processed-wrap {
+    margin-top: 16px; border-radius: 12px; overflow: hidden;
+    background: var(--bg-card); border: 1px solid var(--border);
+    display: none;   /* hidden by default; JS sets display:block + adds .visible */
+  }
+  .processed-wrap.visible,
+  .processed-wrap[style*="display: block"],
+  .processed-wrap[style*="display:block"] { display: block !important; }
+  .processed-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .processed-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; color: var(--text-primary); }
+  .processed-title svg { width: 14px; height: 14px; stroke: var(--accent-teal); fill: none; }
+  #videoPlayer { width: 100%; display: block; max-height: 380px; background: #000; }
+  .dl-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 7px;
+    border: 1px solid var(--accent-teal); background: rgba(6,182,212,.1);
+    color: var(--accent-teal); font-size: 12px; font-weight: 600;
+    font-family: var(--font-main); cursor: pointer; text-decoration: none; transition: all .15s;
+  }
+  .dl-btn:hover { background: var(--accent-teal); color: #000; }
+  .dl-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; }
+
+  /* ── ALERTS PAGE ── */
+  .alerts-grid { display: flex; flex-direction: column; gap: 6px; }
+  .alert-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; display: flex; align-items: center; gap: 14px;
+  }
+  .ac-snap {
+    width: 70px; height: 52px; border-radius: 8px; overflow: hidden;
+    flex-shrink: 0; background: var(--bg-hover);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ac-snap img { width: 100%; height: 100%; object-fit: cover; }
+  .ac-snap svg { width: 22px; height: 22px; stroke: var(--text-muted); opacity: .45; fill: none; }
+  .ac-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ac-icon svg { width: 17px; height: 17px; fill: none; }
+  .ac-icon.red    { background: rgba(239,68,68,.15); } .ac-icon.red svg    { stroke: var(--accent-red); }
+  .ac-icon.orange { background: rgba(249,115,22,.15); } .ac-icon.orange svg { stroke: var(--accent-orange); }
+  .ac-body { flex: 1; }
+  .ac-body .ac-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .ac-body .ac-meta  { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .no-data { color: var(--text-muted); text-align: center; padding: 30px; font-size: 13px; }
+
+  /* ── ANALYTICS ── */
+  .analytics-header { display: flex; align-items: center; justify-content: space-between; }
+  .analytics-top { display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: start; }
+  .chart-select-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .select-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .7px; }
+  #chartSelector {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary);
+    padding: 8px 12px; border-radius: 8px; font-family: var(--font-main); font-size: 13px;
+    width: 100%; outline: none; cursor: pointer;
+  }
+  .insights-box { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .insights-box h3 { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 10px; }
+  .insights-box p { font-size: 12px; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .insights-box p:last-child { border-bottom: none; }
+  .chart-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .chart-container { max-height: 320px; }
+
+  /* ── LOGS ── */
+  .logs-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--bg-card); }
+  th { padding: 11px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 16px; font-size: 12px; color: var(--text-secondary); border-bottom: 1px solid var(--border); font-family: var(--font-mono); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg-hover); color: var(--text-primary); }
+
+  /* ── PDF / EXPORT BUTTON ── */
+  .pdf-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 7px; border: none; cursor: pointer;
+    background: var(--accent-red); color: #fff;
+    font-size: 12px; font-weight: 600; font-family: var(--font-main); transition: all .15s;
+  }
+  .pdf-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; }
+  .pdf-btn:hover { background: #dc2626; }
+
+  /* ── SIGN IN MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.75);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; backdrop-filter: blur(6px);
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-card {
+    position: relative;
+    background: var(--bg-panel); border: 1px solid var(--border-light);
+    border-radius: 16px; padding: 36px 32px; width: 360px;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    box-shadow: 0 24px 48px rgba(0,0,0,.5);
+  }
+  .modal-logo {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent-teal), var(--accent-blue));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-logo svg { width: 24px; height: 24px; stroke: #fff; fill: none; }
+  .modal-title { font-size: 17px; font-weight: 700; text-align: center; color: var(--text-primary); }
+  .modal-sub { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: -12px; }
+  .modal-divider { width: 100%; height: 1px; background: var(--border); }
+  .modal-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px 20px; border-radius: 10px; border: 1px solid var(--border-light);
+    background: var(--bg-card); color: var(--text-primary);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+    font-family: var(--font-main);
+  }
+  .modal-btn:hover { background: var(--bg-hover); border-color: var(--accent-blue); }
+  .modal-btn.anon { background: transparent; border-color: var(--border); color: var(--text-secondary); }
+  .modal-btn.anon:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+  .google-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .modal-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--bg-hover); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-muted); font-size: 16px; line-height: 1;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+</style>
 </head>
 
 <body>
-
-<!-- ✅ FIXED PATH -->
 <audio id="alertSound" src="/static/sounds/alarm.mp3" preload="auto"></audio>
 
-<div class="container">
+<!-- SVG ICON DEFS -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-shield"   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></symbol>
+  <symbol id="i-bell"     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="i-user"     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-home"     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-video"    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></symbol>
+  <symbol id="i-upload"   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></symbol>
+  <symbol id="i-alert"    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-list"     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="i-chart"    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></symbol>
+  <symbol id="i-logout"   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-helmet"   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 5V3m4 2V3"/><path d="M6 15V9a6 6 0 0 1 12 0v6"/></symbol>
+  <symbol id="i-check"    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+  <symbol id="i-play"     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="i-stop"     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></symbol>
+  <symbol id="i-camera"   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  <symbol id="i-cpu"      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></symbol>
+  <symbol id="i-film"     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></symbol>
+  <symbol id="i-folder"   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-image"    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
+  <symbol id="i-pdf"      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-download" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+</svg>
 
-<!-- SIDEBAR -->
-<div class="sidebar" style="padding:15px;">
-
-<div style="background:#1e2937; border-radius:12px; padding:20px; height:100%;">
-
-<h2 class="logo">PPE Monitoring</h2>
-
-<!-- ✅ SDG BADGE -->
-<div style="display:flex; align-items:center; gap:10px; margin:15px 0;">
-    <div style="background:orange; color:white; font-size:10px; padding:4px 8px; border-radius:5px;">
-        SDG 9
+<!-- ══════════ SIGN IN MODAL ══════════ -->
+<div class="modal-overlay hidden" id="signInModal">
+  <div class="modal-card">
+    <div class="modal-close" onclick="closeModal()">&#x2715;</div>
+    <div class="modal-logo">
+      <svg viewBox="0 0 24 24"><use href="#i-shield"/></svg>
     </div>
-    <div style="font-size:12px;">
-        Industry, Innovation<br>
-        <span style="color:gray;">and Infrastructure</span>
+    <div>
+      <div class="modal-title">Sign in to PPE Monitor</div>
+      <div class="modal-sub" style="margin-top:6px;">Choose how you'd like to continue</div>
     </div>
+    <div class="modal-divider"></div>
+    <button class="modal-btn" onclick="signInGoogle()">
+      <svg class="google-icon" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.2 0 5.9 1.1 8.1 3.1l6-6C34.5 3.1 29.6 1 24 1 14.9 1 7.1 6.5 3.5 14.2l7 5.4C12.2 13.5 17.6 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-9.9 7.1-17z"/>
+        <path fill="#FBBC05" d="M10.5 28.6c-.4-1.2-.6-2.4-.6-3.6s.2-2.5.6-3.6l-7-5.4C1.9 18.6 1 21.2 1 24s.9 5.4 2.5 7.9l7-5.3z"/>
+        <path fill="#34A853" d="M24 47c5.6 0 10.3-1.9 13.8-5.1l-7.5-5.8c-1.9 1.3-4.3 2-6.3 2-6.4 0-11.8-4-13.5-9.5l-7 5.4C7.1 41.5 14.9 47 24 47z"/>
+      </svg>
+      Continue with Google
+    </button>
+    <button class="modal-btn anon" onclick="signInAnon()">
+      <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      Sign in Anonymously
+    </button>
+  </div>
 </div>
 
-<ul class="menu">
+<div class="app-shell">
 
-<li onclick="showPage('dashboard')">Dashboard</li>
-<li onclick="showPage('live')">Live Monitoring</li>
-<li onclick="showPage('uploads')">Uploaded Videos</li>
-<li onclick="showPage('alerts')">Alerts</li>
-<li onclick="showPage('logs')">Violation Logs</li>
-<li onclick="showPage('analytics')">Analytics</li>
-
-</ul>
-
-</div>
-</div>
-
-<!-- MAIN -->
-<main class="main">
-
-<!-- ✅ TOP BAR -->
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-
-<h2 id="pageTitle"></h2>
-
-<div style="display:flex; align-items:center; gap:20px;">
-
-<!-- 🔔 ALERT ICON -->
-<div onclick="showPage('alerts')" style="cursor:pointer;">
-    <span style="font-size:20px;">🔔</span>
-</div>
-
-<!-- 👤 ADMIN -->
-<div style="display:flex; align-items:center; gap:8px;">
-    <div style="font-size:14px;">Admin</div>
-    <div style="background:#3b82f6; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-        👷
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-icon"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div>
+      <h1>AI PPE Monitoring System</h1>
     </div>
+    <div class="topbar-right">
+      <div class="icon-btn" onclick="showPage('alerts')" title="Alerts">
+        <svg viewBox="0 0 24 24"><use href="#i-bell"/></svg>
+        <span class="bell-dot" id="bellDot"></span>
+      </div>
+      <div class="admin-pill" onclick="handleAdminClick()" id="adminPill" title="Account">
+        <div class="av"><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+        <span id="adminLabel">Admin</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sdg-badge">
+      <div class="sdg-tag">SDG 9</div>
+      <div class="sdg-text"><strong>Industry, Innovation</strong>and Infrastructure</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><use href="#i-home"/></svg></span>Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('live')" id="nav-live">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><use href="#i-video"/></svg></span>Live Monitoring
+      </div>
+      <div class="nav-item" onclick="showPage('uploads')" id="nav-uploads">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><use href="#i-upload"/></svg></span>Uploaded Videos
+      </div>
+      <div class="nav-item" onclick="showPage('alerts')" id="nav-alerts">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><use href="#i-alert"/></svg></span>Alerts
+      </div>
+      <div class="nav-item" onclick="showPage('logs')" id="nav-logs">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></span>Violation Logs
+      </div>
+      <div class="nav-item" onclick="showPage('analytics')" id="nav-analytics">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><use href="#i-chart"/></svg></span>Analytics
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="nav-item logout" onclick="handleLogout()">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><use href="#i-logout"/></svg></span>Logout
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div id="pageTitle">Dashboard</div>
+
+    <!-- ══════ DASHBOARD ══════ -->
+    <section id="dashboard" class="page active">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-icon orange"><svg viewBox="0 0 24 24"><use href="#i-alert"/></svg></div>
+          <div class="stat-body"><h3>Violations Today</h3><div class="val orange" id="totalViolations">0</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple"><svg viewBox="0 0 24 24"><use href="#i-helmet"/></svg></div>
+          <div class="stat-body"><h3>Helmet Missing</h3><div class="val purple" id="helmetCount">0</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
+          <div class="stat-body"><h3>Detection Rate</h3><div class="val green" id="detectionRate">—</div></div>
+        </div>
+      </div>
+
+      <div class="dashboard-bottom">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="live-dot"></span> Smart Alerts</div>
+          </div>
+          <div class="alerts-list" id="alertsList">
+            <div class="no-data">No alerts yet</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Violation Breakdown</div>
+              <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;">Analysis</span>
+            </div>
+            <div class="breakdown-body">
+              <div class="breakdown-row">
+                <div class="breakdown-label"><span>No Helmet</span><span class="count" id="helmetBarCount">0</span></div>
+                <div class="bar-track"><div class="bar-fill red" id="helmetBarFill" style="width:0%"></div></div>
+              </div>
+              <div class="breakdown-row">
+                <div class="breakdown-label"><span>No Vest</span><span class="count" id="vestBarCount">0</span></div>
+                <div class="bar-track"><div class="bar-fill orange" id="vestBarFill" style="width:0%"></div></div>
+              </div>
+              <div class="breakdown-row">
+                <div class="breakdown-label"><span>No Helmet &amp; Vest</span><span class="count" id="bothBarCount">0</span></div>
+                <div class="bar-track"><div class="bar-fill yellow" id="bothBarFill" style="width:0%"></div></div>
+              </div>
+              <div class="legend">
+                <div class="legend-item"><div class="legend-dot" style="background:var(--accent-red)"></div>No Helmet</div>
+                <div class="legend-item"><div class="legend-dot" style="background:var(--accent-orange)"></div>No Vest</div>
+                <div class="legend-item"><div class="legend-dot" style="background:var(--accent-yellow)"></div>Both</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><div class="panel-title">Compliance Overview</div></div>
+            <div class="compliance-grid">
+              <div class="compliance-item">
+                <div class="ring-wrap">
+                  <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-fill" id="helmetRing" cx="18" cy="18" r="15.9" stroke="#22c55e" stroke-dasharray="0 100"/></svg>
+                  <div class="ring-label" style="color:#22c55e" id="helmetRingLabel">—</div>
+                </div>
+                <div class="compliance-name">Helmet</div>
+              </div>
+              <div class="compliance-item">
+                <div class="ring-wrap">
+                  <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-fill" id="vestRing" cx="18" cy="18" r="15.9" stroke="#06b6d4" stroke-dasharray="0 100"/></svg>
+                  <div class="ring-label" style="color:#06b6d4" id="vestRingLabel">—</div>
+                </div>
+                <div class="compliance-name">Vest</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ LIVE ══════ -->
+    <section id="live" class="page">
+      <div class="live-grid">
+        <div class="camera-card">
+          <div class="camera-header">
+            <div class="camera-title">
+              <svg viewBox="0 0 24 24"><use href="#i-camera"/></svg>
+              Factory A / Camera 1
+              <span class="cam-badge">YOLOV8</span>
+            </div>
+            <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="camStatus">Idle</span>
+          </div>
+          <div class="video-wrapper">
+            <video id="webcam" autoplay playsinline></video>
+            <div class="detection-pill" id="detectionOverlay" style="display:none">Person Detected</div>
+          </div>
+          <div class="camera-footer">
+            <span><span class="live-indicator" id="liveDot" style="display:none"></span><span id="liveStatus">Idle</span></span>
+            <span id="fpsDisplay">FPS: —</span>
+            <span id="workerCount">Workers: —</span>
+          </div>
+          <div class="cam-controls">
+            <button class="ctrl-btn primary" onclick="startCamera()">
+              <svg viewBox="0 0 24 24"><use href="#i-play"/></svg> Start Camera
+            </button>
+            <button class="ctrl-btn danger" onclick="stopCamera()">
+              <svg viewBox="0 0 24 24"><use href="#i-stop"/></svg> Stop
+            </button>
+          </div>
+        </div>
+
+        <div class="camera-card">
+          <div class="camera-header">
+            <div class="camera-title">
+              <svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg>
+              Processed Output
+            </div>
+            <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Detection Overlay</span>
+          </div>
+          <div class="video-wrapper">
+            <!-- populated by dashboard.js → processedFrame2.src = data.frame -->
+            <img id="processedFrame2" style="width:100%;height:100%;object-fit:cover;display:none;">
+            <div class="video-placeholder" id="processedPlaceholder">
+              <svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg>
+              <span>Waiting for detection feed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <canvas id="canvas" style="display:none"></canvas>
+    </section>
+
+    <!-- ══════ UPLOAD ══════ -->
+    <section id="uploads" class="page">
+      <div class="panel" style="padding:20px;">
+        <div class="panel-header" style="border:none;padding:0 0 14px;">
+          <div class="panel-title">Upload Video for Analysis</div>
+        </div>
+
+        <div class="upload-zone">
+          <div class="up-icon"><svg viewBox="0 0 24 24"><use href="#i-film"/></svg></div>
+          <p>Drag &amp; drop a video file here, or click to browse</p>
+          <label class="file-label">
+            <svg viewBox="0 0 24 24"><use href="#i-folder"/></svg>
+            Browse File
+            <input type="file" id="videoInput" accept="video/*">
+          </label>
+        </div>
+
+        <div style="margin-top:14px;">
+          <button class="upload-btn" id="uploadBtn" onclick="uploadVideo()">
+            <svg viewBox="0 0 24 24"><use href="#i-upload"/></svg>
+            Upload &amp; Analyze
+          </button>
+        </div>
+
+        <!-- ── Processed video result — shown after upload ── -->
+        <div class="processed-wrap" id="processedWrap">
+          <div class="processed-header">
+            <div class="processed-title">
+              <svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg>
+              Processed Output
+            </div>
+            <a id="processedDownloadBtn" class="dl-btn" download>
+              <svg viewBox="0 0 24 24"><use href="#i-download"/></svg>
+              Download
+            </a>
+          </div>
+          <video id="videoPlayer" controls></video>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ ALERTS ══════ -->
+    <section id="alerts" class="page">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="live-dot"></span> Safety Alerts</div>
+          <span id="alertCountLabel" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">0 alerts</span>
+        </div>
+        <div class="alerts-grid" id="alertsPageList" style="padding:10px;">
+          <div class="no-data">No alerts yet</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ ANALYTICS ══════ -->
+    <section id="analytics" class="page">
+      <!-- Header row with Export PDF -->
+      <div class="analytics-header">
+        <span style="font-size:13px;font-weight:600;color:var(--text-secondary);">Analytics Dashboard</span>
+        <button class="pdf-btn" onclick="exportAnalyticsPDF()">
+          <svg viewBox="0 0 24 24"><use href="#i-pdf"/></svg>
+          Export PDF
+        </button>
+      </div>
+
+      <div class="analytics-top">
+        <div class="chart-select-panel">
+          <span class="select-label">Chart Type</span>
+          <select id="chartSelector" onchange="renderSelectedChart()">
+            <option value="bar">Bar Chart</option>
+            <option value="pie">Pie Chart</option>
+            <option value="line">Line Chart</option>
+            <option value="doughnut">Doughnut Chart</option>
+            <option value="horizontal">Horizontal Bar</option>
+            <option value="matrix">Matrix Chart</option>
+            <option value="timeline">Time Trend</option>
+          </select>
+          <div class="insights-box" style="margin-top:8px;">
+            <h3>Top Insights</h3>
+            <p id="insight1">—</p>
+            <p id="insight2">—</p>
+            <p id="insight3">—</p>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-container">
+            <canvas id="analyticsChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ LOGS ══════ -->
+    <section id="logs" class="page">
+      <div class="logs-panel">
+        <div class="panel-header">
+          <div class="panel-title">Violation Logs</div>
+          <button class="pdf-btn" onclick="exportLogsPDF()">
+            <svg viewBox="0 0 24 24"><use href="#i-pdf"/></svg>
+            Export PDF
+          </button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th><th>Camera</th><th>Violation</th><th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="logsTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
 </div>
 
-</div>
+<script>
+/* ══════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════ */
+var currentUser = null;
 
-</div>
+function handleAdminClick() {
+  if (!currentUser) document.getElementById('signInModal').classList.remove('hidden');
+}
+function closeModal() {
+  document.getElementById('signInModal').classList.add('hidden');
+}
+function signInGoogle() {
+  currentUser = { name: 'Admin', type: 'google' };
+  document.getElementById('adminLabel').textContent = 'Admin';
+  closeModal();
+}
+function signInAnon() {
+  currentUser = { name: 'Guest', type: 'anon' };
+  document.getElementById('adminLabel').textContent = 'Guest';
+  closeModal();
+}
+function handleLogout() {
+  currentUser = null;
+  document.getElementById('adminLabel').textContent = 'Admin';
+  _violations = { helmet: 0, vest: 0, both: 0, detections: 0, frames: 0 };
+  updateDashboardStats();
+  document.getElementById('alertsList').innerHTML      = '<div class="no-data">No alerts yet</div>';
+  document.getElementById('alertsPageList').innerHTML  = '<div class="no-data">No alerts yet</div>';
+  document.getElementById('logsTable').innerHTML       = '';
+}
+document.getElementById('signInModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
 
-<!-- DASHBOARD -->
-<section id="dashboard" class="page">
+/* ══════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  var page = document.getElementById(id);
+  var nav  = document.getElementById('nav-' + id);
+  if (page) page.classList.add('active');
+  if (nav)  nav.classList.add('active');
+  var titles = { dashboard:'Dashboard', live:'Live Monitoring', uploads:'Uploaded Videos', alerts:'Safety Alerts', logs:'Violation Logs', analytics:'Analytics' };
+  document.getElementById('pageTitle').textContent = titles[id] || id;
+}
 
-<div class="dashboard-grid">
+/* ══════════════════════════════════════════
+   DYNAMIC STATS
+══════════════════════════════════════════ */
+var _violations = { helmet: 0, vest: 0, both: 0, detections: 0, frames: 0 };
 
-<div class="stat-card total-card">
-<h3>Total Violations</h3>
-<p id="totalViolations">0</p>
-</div>
+window.updateViolationStats = function(data) {
+  if (data.helmet     !== undefined) _violations.helmet     = data.helmet;
+  if (data.vest       !== undefined) _violations.vest       = data.vest;
+  if (data.both       !== undefined) _violations.both       = data.both;
+  if (data.detections !== undefined) _violations.detections = data.detections;
+  if (data.frames     !== undefined) _violations.frames     = data.frames;
+  updateDashboardStats();
+};
 
-<div class="stat-card helmet-card">
-<h3>Helmet Missing</h3>
-<p id="helmetCount">0</p>
-</div>
+function updateDashboardStats() {
+  var h = _violations.helmet, v = _violations.vest, b = _violations.both;
+  var total = h + v + b;
+  document.getElementById('totalViolations').textContent = total;
+  document.getElementById('helmetCount').textContent     = h + b;
 
-<div class="stat-card vest-card">
-<h3>Vest Missing</h3>
-<p id="vestCount">0</p>
-</div>
+  var frames = _violations.frames, dets = _violations.detections;
+  if (frames > 0) {
+    document.getElementById('detectionRate').textContent = Math.min(Math.round(dets / frames * 100), 100) + '%';
+  } else {
+    document.getElementById('detectionRate').textContent = '—';
+  }
 
-</div>
+  var maxBar = Math.max(h, v, b, 1);
+  document.getElementById('helmetBarCount').textContent   = h;
+  document.getElementById('vestBarCount').textContent     = v;
+  document.getElementById('bothBarCount').textContent     = b;
+  document.getElementById('helmetBarFill').style.width    = Math.round(h / maxBar * 100) + '%';
+  document.getElementById('vestBarFill').style.width      = Math.round(v / maxBar * 100) + '%';
+  document.getElementById('bothBarFill').style.width      = Math.round(b / maxBar * 100) + '%';
 
-<div class="alerts-section">
+  var workerEst  = Math.max(dets, h + b, v + b, 1);
+  var helmetComp = Math.min(100, Math.max(0, Math.round((1 - (h + b) / workerEst) * 100)));
+  var vestComp   = Math.min(100, Math.max(0, Math.round((1 - (v + b) / workerEst) * 100)));
+  document.getElementById('helmetRingLabel').textContent = helmetComp + '%';
+  document.getElementById('vestRingLabel').textContent   = vestComp   + '%';
+  document.getElementById('helmetRing').setAttribute('stroke-dasharray', helmetComp + ' 100');
+  document.getElementById('vestRing').setAttribute('stroke-dasharray',   vestComp   + ' 100');
+}
 
-<h3>Recent Alerts</h3>
+/* ══════════════════════════════════════════
+   PROCESSED FRAME (Live page)
+   Called from dashboard.js after each /detect_frame response
+══════════════════════════════════════════ */
+window.showProcessedFrame = function(src) {
+  var img  = document.getElementById('processedFrame2');
+  var ph   = document.getElementById('processedPlaceholder');
+  if (src) {
+    img.src = src;
+    img.style.display = 'block';
+    if (ph) ph.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    if (ph) ph.style.display = 'flex';
+  }
+};
 
-<div id="alertsList"></div>
+/* ══════════════════════════════════════════
+   PROCESSED VIDEO (Upload page)
+   Called from dashboard.js after /upload returns video_url
+══════════════════════════════════════════ */
+window.showProcessedVideo = function(url) {
+  var wrap   = document.getElementById('processedWrap');
+  var player = document.getElementById('videoPlayer');
+  var dlBtn  = document.getElementById('processedDownloadBtn');
+  if (!wrap || !player) { console.error('[PPE] processedWrap or videoPlayer element missing'); return; }
 
-</div>
+  // Cache-buster forces browser to fetch the freshly written file
+  player.src = url + '?t=' + Date.now();
+  if (dlBtn) dlBtn.href = url;
 
-</section>
+  // Show the panel — set both inline style AND class so nothing can hide it
+  wrap.style.display = 'block';
+  wrap.classList.add('visible');
 
-<!-- LIVE -->
-<section id="live" class="page">
+  player.load();
+  // Smooth-scroll so the user sees the video appear
+  setTimeout(function(){ wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 200);
+};
 
-<h3>Live Monitoring</h3>
+/* ══════════════════════════════════════════
+   ALERTS PAGE — count badge update
+   dashboard.js renders the alert rows directly;
+   this just keeps the count label in sync
+══════════════════════════════════════════ */
+window.updateAlertCount = function(count) {
+  var badge = document.getElementById('alertCountLabel');
+  if (badge) badge.textContent = count + ' alert' + (count !== 1 ? 's' : '');
+};
 
-<div class="live-container">
+/* ══════════════════════════════════════════
+   PDF EXPORT — LOGS
+══════════════════════════════════════════ */
+function exportLogsPDF() {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-<div class="video-box">
-<video id="webcam" autoplay playsinline></video>
-</div>
+  // Background
+  doc.setFillColor(13, 17, 23); doc.rect(0, 0, 297, 210, 'F');
+  doc.setFillColor(22, 27, 36); doc.rect(0, 0, 297, 22,  'F');
 
-<div class="video-box">
-<img id="processedFrame">
-</div>
+  doc.setTextColor(226, 232, 240);
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+  doc.text('AI PPE MONITORING SYSTEM', 14, 10);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text('Violation Log Report', 14, 16);
+  doc.text('Generated: ' + new Date().toLocaleString(), 190, 16);
 
-</div>
+  // Collect rows from DOM
+  var rows = [];
+  document.querySelectorAll('#logsTable tr').forEach(function(tr) {
+    var cells = tr.querySelectorAll('td');
+    if (cells.length >= 4) {
+      rows.push([
+        cells[0].textContent.trim(),
+        cells[1].textContent.trim(),
+        cells[2].textContent.trim(),
+        cells[3].textContent.trim()
+      ]);
+    }
+  });
 
-<canvas id="canvas" style="display:none"></canvas>
+  doc.autoTable({
+    startY: 28,
+    head: [['Timestamp', 'Camera', 'Violation Type', 'Confidence']],
+    body: rows.length > 0 ? rows : [['No data', '', '', '']],
+    styles: { font:'helvetica', fontSize:9, cellPadding:4, fillColor:[28,35,51], textColor:[148,163,184], lineColor:[42,52,71], lineWidth:0.3 },
+    headStyles: { fillColor:[59,130,246], textColor:[255,255,255], fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[22,27,36] },
+    columnStyles: { 0:{cellWidth:65}, 1:{cellWidth:55}, 2:{cellWidth:80}, 3:{cellWidth:30} },
+    margin: { left:14, right:14 }
+  });
 
-<div class="controls">
-<button onclick="startCamera()">Start Camera</button>
-<button onclick="stopCamera()">Stop Camera</button>
-</div>
+  var pages = doc.internal.getNumberOfPages();
+  for (var i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(71, 85, 105);
+    doc.text('Page ' + i + ' of ' + pages, 270, 204);
+  }
 
-</section>
+  doc.save('PPE_Violation_Log_' + new Date().toISOString().split('T')[0] + '.pdf');
+}
 
-<!-- UPLOAD -->
-<section id="uploads" class="page">
+/* ══════════════════════════════════════════
+   PDF EXPORT — ANALYTICS
+══════════════════════════════════════════ */
+function exportAnalyticsPDF() {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-<h3>Upload Video</h3>
+  doc.setFillColor(13, 17, 23); doc.rect(0, 0, 297, 210, 'F');
+  doc.setFillColor(22, 27, 36); doc.rect(0, 0, 297, 22,  'F');
 
-<input type="file" id="videoInput">
-<button onclick="uploadVideo()">Upload</button>
+  doc.setTextColor(226, 232, 240);
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+  doc.text('AI PPE MONITORING SYSTEM', 14, 10);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text('Analytics Report', 14, 16);
+  doc.text('Generated: ' + new Date().toLocaleString(), 190, 16);
 
-<br><br>
+  // Insights
+  var insights = [
+    document.getElementById('insight1').textContent,
+    document.getElementById('insight2').textContent,
+    document.getElementById('insight3').textContent
+  ].filter(function(t){ return t && t !== '—'; });
 
-<video id="videoPlayer" controls width="600"></video>
+  var y = 30;
+  if (insights.length > 0) {
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(148, 163, 184);
+    doc.text('TOP INSIGHTS', 14, y); y += 6;
+    insights.forEach(function(ins, idx) {
+      doc.setFillColor(28, 35, 51);
+      doc.roundedRect(14, y, 269, 8, 2, 2, 'F');
+      doc.setTextColor(226, 232, 240);
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text((idx + 1) + '.  ' + ins, 18, y + 5.5);
+      y += 11;
+    });
+    y += 4;
+  }
 
-</section>
+  // Summary stats from DOM
+  var total  = document.getElementById('totalViolations').textContent || '0';
+  var helmet = document.getElementById('helmetCount').textContent     || '0';
+  var vest   = document.getElementById('vestBarCount').textContent    || '0';
 
-<!-- ALERTS -->
-<section id="alerts" class="page">
+  doc.autoTable({
+    startY: y,
+    head: [['Metric', 'Count']],
+    body: [
+      ['Total Violations',  total],
+      ['No Helmet',         helmet],
+      ['No Safety Vest',    vest]
+    ],
+    styles: { font:'helvetica', fontSize:10, cellPadding:5, fillColor:[28,35,51], textColor:[148,163,184], lineColor:[42,52,71], lineWidth:0.3 },
+    headStyles: { fillColor:[59,130,246], textColor:[255,255,255], fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[22,27,36] },
+    columnStyles: { 0:{cellWidth:100}, 1:{cellWidth:40} },
+    margin: { left:14, right:14 }
+  });
 
-<h3>Safety Alerts</h3>
+  doc.save('PPE_Analytics_' + new Date().toISOString().split('T')[0] + '.pdf');
+}
 
-<div class="alerts-container" id="alertsPageList">
-<p class="no-alert">No alerts yet</p>
-</div>
-
-</section>
-
-<!-- ANALYTICS -->
-<section id="analytics" class="page">
-
-<h3>Analytics Dashboard</h3>
-
-<select id="chartSelector" onchange="renderSelectedChart()">
-<option value="bar">Bar Chart</option>
-<option value="pie">Pie Chart</option>
-<option value="line">Line Chart</option>
-<option value="doughnut">Doughnut Chart</option>
-<option value="horizontal">Horizontal Bar</option>
-<option value="matrix">Matrix Chart</option>
-<option value="timeline">Time Trend</option>
-</select>
-
-<br><br>
-
-<div class="insights-box">
-<h3>Top Insights</h3>
-<p id="insight1"></p>
-<p id="insight2"></p>
-<p id="insight3"></p>
-</div>
-
-<div class="chart-container">
-<canvas id="analyticsChart"></canvas>
-</div>
-
-</section>
-
-<!-- LOGS -->
-<section id="logs" class="page">
-
-<h3>Violation Logs</h3>
-
-<table>
-
-<thead>
-<tr>
-<th>Time</th>
-<th>Camera</th>
-<th>Violation</th>
-<th>Confidence</th>
-</tr>
-</thead>
-
-<tbody id="logsTable"></tbody>
-
-</table>
-
-</section>
-
-</main>
-
-</div>
+// Init
+updateDashboardStats();
+</script>
 
 <script src="/static/js/dashboard.js"></script>
-
 </body>
 </html>
