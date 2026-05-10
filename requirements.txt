@@ -3,4 +3,9 @@ opencv-python-headless
 ultralytics
 supabase
 python-dotenv
+<<<<<<< HEAD
 gunicorn
+=======
+
+gunicorn
+>>>>>>> d79d49783bf846d6e7a834411c05e8f195a05b67
