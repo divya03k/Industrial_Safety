@@ -1,4 +1,4 @@
-from supabase_client import supabase
+from backend.supabase_client import supabase
 
 def insert_violation(violation_type, confidence, camera_id):
 
