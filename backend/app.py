@@ -8,8 +8,8 @@ import subprocess
 import traceback
 from datetime import datetime
 from ultralytics import YOLO
-from database import insert_violation, get_logs
 
+from backend.database import insert_violation, get_logs
 app = Flask(__name__)
 
 alerts              = []
