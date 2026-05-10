@@ -16,7 +16,16 @@ alerts              = []
 violation_logs      = []
 last_alert_time     = {}
 last_db_insert_time = {}
-model               = YOLO("model/best.pt")
+model = None
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        print("Loading YOLO model...")
+        model = YOLO("model/best.pt")
+        model.to("cpu")   # IMPORTANT
+    return model
 
 helmet_violations = 0
 vest_violations   = 0
@@ -199,7 +208,7 @@ def detect_frame():
         if frame is None:
             return jsonify({"frame": data, "detections": [], "violations": [], "worker_count": 0})
 
-        results     = model(frame)[0]
+        results = get_model()(frame)[0]
         detections  = []
         det_objects = []
         confidences = []
